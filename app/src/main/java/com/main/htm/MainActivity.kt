@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
         initOpenStreetMap()
         requestForegroundLocationPermissions()
 
-        updateMap()
+        updateMap(isFiltered = false)
 
         setContent {
             HIkerTravelMapTheme {
@@ -94,11 +94,12 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         )
-                        UpdateMapButton(
-                            {
-                                updateMap()
-                            }
-                        )
+                        UpdateRawMapButton {
+                            updateMap(isFiltered = false)
+                        }
+                        UpdateFilteredMapButton {
+                            updateMap(isFiltered = true)
+                        }
                     }
                 }
             }
@@ -126,12 +127,14 @@ class MainActivity : ComponentActivity() {
 
     }
 
-    fun updateMap(){
+    fun updateMap(
+        isFiltered: Boolean
+    ){
         activityScope.launch {
             currentPolylines.forEach { map.overlays.remove(it) }
             currentPolylines.clear()
 
-            val res = recordApi.getRawPath()
+            val res = if(isFiltered) recordApi.getFiltered() else recordApi.getRawPath()
             val paths = res.paths.map { path ->
                 path.map {
                     GeoPoint(it[1], it[0])
@@ -151,8 +154,6 @@ class MainActivity : ComponentActivity() {
             }
 
             map.invalidate()
-
-            delay(5000)
         }
     }
 
@@ -268,12 +269,23 @@ fun RecordButton(f:() -> Unit){
 }
 
 @Composable
-fun UpdateMapButton(f:() -> Unit){
+fun UpdateRawMapButton(f:() -> Unit){
     Button(
         onClick = {
             f()
         },
     ) {
-        Text(text = "Update Map")
+        Text(text = "Update Raw Map")
+    }
+}
+
+@Composable
+fun UpdateFilteredMapButton(f:() -> Unit){
+    Button(
+        onClick = {
+            f()
+        },
+    ) {
+        Text(text = "Update Filtered Map")
     }
 }

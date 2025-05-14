@@ -29,6 +29,9 @@ interface RecordApiClient {
 
     @GET("record/path/raw")
     suspend fun getRawPath(): GetRawPathsRes
+
+    @GET("record/path/filtered")
+    suspend fun getFiltered(): GetRawPathsRes
 }
 
 val retrofit = Retrofit.Builder()
