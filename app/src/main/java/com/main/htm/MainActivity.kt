@@ -19,7 +19,9 @@ import android.graphics.Color
 import android.net.Uri
 import android.provider.Settings
 import android.widget.FrameLayout
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,22 +68,39 @@ class MainActivity : ComponentActivity() {
         setContent {
             HIkerTravelMapTheme {
                 AndroidView(factory = { map })
-                RecordButton(
-                    {
-                        if(checkAllLocationPermission()){
-                            when(DataCollectService.currentDataCollectStatus.value) {
-                                DataCollectStatus.STOP -> lifecycleScope.launch{
-                                    RecordEventBus.sendEvent()
-                                }
-                                DataCollectStatus.COLLECTING -> lifecycleScope.launch{
-                                    RecordEventBus.sendEvent()
+                Box(modifier = Modifier.fillMaxSize()) {
+
+                }
+                Box(modifier = Modifier.fillMaxSize()){
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ){
+                        RecordButton(
+                            {
+                                if(checkAllLocationPermission()){
+                                    when(DataCollectService.currentDataCollectStatus.value) {
+                                        DataCollectStatus.STOP -> lifecycleScope.launch{
+                                            RecordEventBus.sendEvent()
+                                        }
+                                        DataCollectStatus.COLLECTING -> lifecycleScope.launch{
+                                            RecordEventBus.sendEvent()
+                                        }
+                                    }
+                                } else {
+                                    requestForegroundLocationPermissions()
                                 }
                             }
-                        } else {
-                            requestForegroundLocationPermissions()
-                        }
+                        )
+                        UpdateMapButton(
+                            {
+                                updateMap()
+                            }
+                        )
                     }
-                )
+                }
             }
         }
     }
@@ -119,14 +138,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val colors = listOf(Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA)
+            val colors = listOf(Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA, Color.BLACK, Color.CYAN, Color.DKGRAY, Color.GRAY, Color.LTGRAY, Color.YELLOW)
 
             // 각 경로마다 Polyline을 생성해서 다른 색상 적용
             paths.forEachIndexed { index, geoPoints ->
                 val line = Polyline()
                 line.setPoints(geoPoints)
                 line.color = colors[index % colors.size] // 색상 순환
-                line.width = 8f
+                line.width = 6f
                 currentPolylines.add(line)
                 map.overlays.add(line)
             }
@@ -234,21 +253,27 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RecordButton(f:() -> Unit){
     val collectStatus by DataCollectService.currentDataCollectStatus.collectAsState()
-    Box(modifier = Modifier.fillMaxSize()) {
-        Button(
-            onClick = {
-                f()
-            },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp) // 여백
-        ) {
-            Text(text =
-                when(collectStatus){
-                    DataCollectStatus.STOP -> "Start Recording"
-                    DataCollectStatus.COLLECTING -> "Stop Recording"
-                }
-            )
+    Button(
+        onClick = {
+            f()
         }
+    ) {
+        Text(text =
+            when(collectStatus){
+                DataCollectStatus.STOP -> "Start Recording"
+                DataCollectStatus.COLLECTING -> "Stop Recording"
+            }
+        )
+    }
+}
+
+@Composable
+fun UpdateMapButton(f:() -> Unit){
+    Button(
+        onClick = {
+            f()
+        },
+    ) {
+        Text(text = "Update Map")
     }
 }
