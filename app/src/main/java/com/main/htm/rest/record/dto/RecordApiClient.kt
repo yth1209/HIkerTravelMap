@@ -1,7 +1,6 @@
 package com.main.htm.rest.record.dto
 
 import com.main.htm.common.dto.Response
-import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
@@ -27,11 +26,17 @@ interface RecordApiClient {
         @Path("travelId") travelId: String
     ): Response
 
-    @GET("record/path/raw")
-    suspend fun getRawPath(): GetRawPathsRes
+    @GET("view/path/raw")
+    suspend fun getRawPath(): GetGeomRes
 
-    @GET("record/path/filtered")
-    suspend fun getFiltered(): GetRawPathsRes
+    @GET("view/path/filtered")
+    suspend fun getFiltered(): GetGeomRes
+
+    @GET("view/cluster")
+    suspend fun getClusters(): GetGeomRes
+
+    @GET("view/relax-zones")
+    suspend fun getRelaxZones(): GetGeomRes
 }
 
 val retrofit = Retrofit.Builder()

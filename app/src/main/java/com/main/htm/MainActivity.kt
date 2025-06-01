@@ -29,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
+import androidx.core.graphics.blue
+import androidx.core.graphics.green
+import androidx.core.graphics.red
 import androidx.lifecycle.lifecycleScope
 import com.main.htm.enums.DataCollectStatus
 import com.main.htm.event.RecordEventBus
@@ -36,12 +39,12 @@ import com.main.htm.rest.record.dto.recordApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
@@ -63,7 +66,7 @@ class MainActivity : ComponentActivity() {
         initOpenStreetMap()
         requestForegroundLocationPermissions()
 
-        updateMap(isFiltered = false)
+        updateMap(2)
 
         setContent {
             HIkerTravelMapTheme {
@@ -95,10 +98,13 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                         UpdateRawMapButton {
-                            updateMap(isFiltered = false)
+                            updateMap(0)
                         }
                         UpdateFilteredMapButton {
-                            updateMap(isFiltered = true)
+                            updateMap(1)
+                        }
+                        UpdateClusterMapButton {
+                            updateMap(2)
                         }
                     }
                 }
@@ -128,30 +134,55 @@ class MainActivity : ComponentActivity() {
     }
 
     fun updateMap(
-        isFiltered: Boolean
+        pathType: Int //0: raw, 1: filtered, 2: global clusters (final)
     ){
         activityScope.launch {
             currentPolylines.forEach { map.overlays.remove(it) }
             currentPolylines.clear()
 
-            val res = if(isFiltered) recordApi.getFiltered() else recordApi.getRawPath()
-            val paths = res.paths.map { path ->
+            val relaxZonesRes = recordApi.getRelaxZones()
+            val relaxZones = relaxZonesRes.paths.map { path ->
+                path.map {
+                    GeoPoint(it[1], it[0])
+                }
+            }
+            relaxZones.forEachIndexed { index, geoPoints ->
+                val polygon = Polygon()
+                polygon.points = geoPoints
+                polygon.fillColor = Color.argb(100, Color.GREEN.red, Color.GREEN.green, Color.GREEN.blue)
+                polygon.strokeColor = Color.GREEN
+                polygon.strokeWidth = 3f
+                polygon.title = "Polygon ${index + 1}"
+
+                map.overlays.add(polygon)
+            }
+
+
+            val pathRes = when(pathType){
+                0 -> recordApi.getRawPath()
+                1 -> recordApi.getFiltered()
+                2 -> recordApi.getClusters()
+                else -> recordApi.getClusters()
+            }
+
+            val paths = pathRes.paths.map { path ->
                 path.map {
                     GeoPoint(it[1], it[0])
                 }
             }
 
-            val colors = listOf(Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA, Color.BLACK, Color.CYAN, Color.DKGRAY, Color.GRAY, Color.LTGRAY, Color.YELLOW)
+            val colors = listOf(Color.RED, Color.BLUE, Color.MAGENTA, Color.BLACK, Color.CYAN, Color.DKGRAY, Color.GRAY, Color.LTGRAY, Color.YELLOW)
 
             // 각 경로마다 Polyline을 생성해서 다른 색상 적용
             paths.forEachIndexed { index, geoPoints ->
                 val line = Polyline()
                 line.setPoints(geoPoints)
-                line.color = colors[index % colors.size] // 색상 순환
+                line.color = if(pathType==2) Color.BLUE else colors[index % colors.size] // 색상 순환
                 line.width = 6f
                 currentPolylines.add(line)
                 map.overlays.add(line)
             }
+
 
             map.invalidate()
         }
@@ -287,5 +318,16 @@ fun UpdateFilteredMapButton(f:() -> Unit){
         },
     ) {
         Text(text = "Update Filtered Map")
+    }
+}
+
+@Composable
+fun UpdateClusterMapButton(f:() -> Unit){
+    Button(
+        onClick = {
+            f()
+        },
+    ) {
+        Text(text = "Update Cluster Map")
     }
 }
